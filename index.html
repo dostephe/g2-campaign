@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- saved from url=(0064)file:///C:/Users/DougStephenson/Downloads/G2_Campaign_index.html -->
+<!-- saved from url=(0066)file:///C:/Users/DougStephenson/Downloads/G2_Campaign_index_2.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>G2 Email Campaign Tool</title>
 <script src="./index_files/xlsx.full.min.js.download"></script>
-<script src="./index_files/msal-browser.min.js.download"></script>
+<script src="./index_files/msal-browser.min.js.download" crossorigin="anonymous"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -117,10 +117,10 @@
 
   <!-- Auth bar -->
   <div class="auth-bar">
-    <div class="auth-dot" id="auth-dot"></div>
+    <div class="auth-dot err" id="auth-dot"></div>
     <div class="auth-info">
-      <strong id="auth-title">Not signed in</strong>
-      <span id="auth-sub">⚠️ Client ID not yet configured — see setup instructions.</span>
+      <strong id="auth-title">Failed to load Microsoft sign-in library</strong>
+      <span id="auth-sub">Please check your internet connection and reload the page.</span>
     </div>
     <button class="btn-ms" id="btn-signin" onclick="signIn()">🔐 Sign in with Microsoft</button>
     <button class="btn-ms ghost" id="btn-signout" onclick="signOut()" style="display:none;">Sign out</button>
@@ -198,7 +198,7 @@ Doug"></textarea>
 
 <script>
 // ── CONFIG — update CLIENT_ID after Azure app registration ───────────────────
-const CLIENT_ID  = 'PASTE_YOUR_CLIENT_ID_HERE';
+const CLIENT_ID  = '5a747e38-c3b9-4320-95e1-7635ccf1c501';
 const FROM_EMAIL = 'doug@g2contracts.com';
 const CC_EMAIL   = 'patrick@g2contracts.com';
 const SCOPES     = ['Mail.ReadWrite'];
@@ -208,12 +208,25 @@ let accessToken  = null;
 let contacts     = [];
 
 // ── MSAL init ─────────────────────────────────────────────────────────────────
+function waitForMsal(callback, attempts) {
+  attempts = attempts || 0;
+  if (typeof msal !== 'undefined') {
+    callback();
+  } else if (attempts < 20) {
+    setTimeout(function() { waitForMsal(callback, attempts + 1); }, 250);
+  } else {
+    document.getElementById('auth-dot').className = 'auth-dot err';
+    document.getElementById('auth-title').textContent = 'Failed to load Microsoft sign-in library';
+    document.getElementById('auth-sub').textContent = 'Please check your internet connection and reload the page.';
+  }
+}
+
 window.addEventListener('load', () => {
   if (CLIENT_ID === 'PASTE_YOUR_CLIENT_ID_HERE') {
     document.getElementById('auth-sub').textContent = '⚠️ Client ID not yet configured — see setup instructions.';
     return;
   }
-  initMsal();
+  waitForMsal(initMsal);
 });
 
 function initMsal() {
