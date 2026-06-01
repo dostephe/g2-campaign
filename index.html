@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<!-- saved from url=(0064)file:///C:/Users/DougStephenson/Downloads/G2_Campaign_index.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G2 Email Campaign Tool</title>
+<script src="./index_files/xlsx.full.min.js.download"></script>
+<script src="./index_files/msal-browser.min.js.download"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f4f0; --surface: #ffffff; --surface2: #f9f8f5;
+    --border: #e2e0d8; --border-strong: #c8c5bb;
+    --text: #1a1917; --text-muted: #6b6860; --text-faint: #9e9b94;
+    --accent: #1a1917; --accent-text: #ffffff;
+    --green-bg: #eaf5e9; --green-text: #2d6e2a;
+    --blue-bg: #e8f0fe; --blue-text: #1a4bb5;
+    --orange-bg: #fff7ed; --orange-text: #c2410c;
+    --red-bg: #fef2f2; --red-text: #b91c1c;
+    --ms-blue: #0078d4;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  body { font-family: 'Georgia', serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  header { margin-bottom: 2rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .header-text h1 { font-size: 26px; font-weight: normal; letter-spacing: -0.3px; margin-bottom: 4px; }
+  .header-text p { font-family: Arial, sans-serif; font-size: 14px; color: var(--text-muted); }
+
+  /* Auth bar */
+  .auth-bar { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .auth-dot { width: 9px; height: 9px; border-radius: 50%; background: #d1d5db; flex-shrink: 0; }
+  .auth-dot.on { background: #22c55e; }
+  .auth-dot.err { background: #ef4444; }
+  .auth-info { flex: 1; min-width: 150px; font-family: Arial, sans-serif; }
+  .auth-info strong { font-size: 13px; font-weight: 600; display: block; color: var(--text); }
+  .auth-info span { font-size: 12px; color: var(--text-muted); }
+  .btn-ms { display: inline-flex; align-items: center; gap: 7px; background: var(--ms-blue); color: #fff; border: none; border-radius: var(--radius-sm); padding: 0 16px; height: 36px; font-family: Arial, sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+  .btn-ms:hover { background: #005fa3; }
+  .btn-ms.ghost { background: transparent; color: var(--text); border: 1px solid var(--border-strong); }
+  .btn-ms.ghost:hover { background: var(--surface2); }
+
+  /* Steps */
+  .steps { display: flex; flex-direction: column; gap: 1.5rem; }
+  .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: opacity 0.2s; }
+  .step-card.locked { opacity: 0.45; pointer-events: none; }
+  .step-header { display: flex; align-items: center; gap: 12px; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--surface2); }
+  .step-num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-header h2 { font-size: 15px; font-weight: normal; font-family: Arial, sans-serif; }
+  .step-body { padding: 1.25rem; }
+
+  /* Upload */
+  .upload-zone { border: 2px dashed var(--border-strong); border-radius: var(--radius-sm); padding: 2rem; text-align: center; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .upload-zone:hover, .upload-zone.drag-over { background: var(--surface2); border-color: var(--accent); }
+  .upload-icon { font-size: 32px; margin-bottom: 10px; }
+  .upload-zone p { font-family: Arial, sans-serif; font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+  .upload-zone strong { color: var(--text); }
+  #file-input { display: none; }
+  .file-info { margin-top: 12px; display: none; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+  .badge-green { background: var(--green-bg); color: var(--green-text); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue-text); }
+  .col-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .col-tag { font-family: monospace; font-size: 12px; background: #f0efeb; border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; color: var(--text-muted); }
+
+  /* Fields */
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .field input, .field textarea { width: 100%; font-family: Arial, sans-serif; font-size: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--surface2); color: var(--text); transition: border-color 0.15s; }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+  .field textarea { min-height: 180px; resize: vertical; line-height: 1.6; font-family: Arial, sans-serif; }
+  .hint { font-family: Arial, sans-serif; font-size: 12px; color: var(--text-faint); margin-top: 6px; line-height: 1.5; }
+  .hint code { background: #f0efeb; border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-size: 11px; color: var(--text-muted); }
+
+  /* Buttons */
+  .btn-primary { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: var(--accent-text); border: none; border-radius: var(--radius-sm); padding: 0 22px; height: 42px; font-family: Arial, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Progress */
+  .progress-wrap { margin-top: 1.25rem; display: none; }
+  .progress-outer { background: var(--border); border-radius: 99px; height: 6px; margin-bottom: 8px; overflow: hidden; }
+  .progress-inner { height: 6px; background: var(--ms-blue); border-radius: 99px; width: 0%; transition: width 0.3s; }
+  .progress-label { font-family: Arial, sans-serif; font-size: 13px; color: var(--text-muted); }
+
+  /* Results */
+  #results { display: none; margin-top: 1.5rem; }
+  .results-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem; font-family: Arial, sans-serif; font-size: 13px; color: var(--text-muted); }
+  .results-bar strong { color: var(--text); }
+  .summary-box { font-family: Arial, sans-serif; font-size: 14px; font-weight: 600; border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 1rem; display: none; }
+  .summary-box.ok { background: var(--green-bg); color: var(--green-text); border: 1px solid #86efac; }
+  .summary-box.warn { background: var(--orange-bg); color: var(--orange-text); border: 1px solid #fed7aa; }
+  .email-cards { display: flex; flex-direction: column; gap: 8px; }
+  .email-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem 1.25rem; display: flex; align-items: center; gap: 14px; }
+  .email-card.success { border-color: #86efac; background: var(--green-bg); }
+  .email-card.fail { border-color: #fca5a5; background: var(--red-bg); }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--blue-bg); color: var(--blue-text); font-family: Arial, sans-serif; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ec-info { flex: 1; min-width: 0; }
+  .ec-name { font-family: Arial, sans-serif; font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ec-email { font-family: Arial, sans-serif; font-size: 12px; color: var(--text-muted); }
+  .ec-status { font-family: Arial, sans-serif; font-size: 12px; margin-top: 2px; color: var(--text-faint); }
+  .ec-status.ok { color: var(--green-text); font-weight: 600; }
+  .ec-status.err { color: var(--red-text); }
+
+  .error-msg { font-family: Arial, sans-serif; font-size: 13px; color: var(--red-text); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="header-text">
+      <h1>📧 G2 Email Campaign Tool</h1>
+      <p>Creates drafts in <strong>doug@g2contracts.com</strong> Drafts folder · CC: patrick@g2contracts.com</p>
+    </div>
+  </header>
+
+  <!-- Auth bar -->
+  <div class="auth-bar">
+    <div class="auth-dot" id="auth-dot"></div>
+    <div class="auth-info">
+      <strong id="auth-title">Not signed in</strong>
+      <span id="auth-sub">⚠️ Client ID not yet configured — see setup instructions.</span>
+    </div>
+    <button class="btn-ms" id="btn-signin" onclick="signIn()">🔐 Sign in with Microsoft</button>
+    <button class="btn-ms ghost" id="btn-signout" onclick="signOut()" style="display:none;">Sign out</button>
+  </div>
+
+  <div class="steps">
+
+    <!-- Step 1 -->
+    <div class="step-card locked" id="step1">
+      <div class="step-header"><div class="step-num">1</div><h2>Upload your contact list (.xlsx or .csv)</h2></div>
+      <div class="step-body">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById(&#39;file-input&#39;).click()">
+          <div class="upload-icon">📂</div>
+          <p><strong>Click to upload</strong> your Excel or CSV file</p>
+          <p style="margin-top:4px;">Expected columns: First Name, Last Name, Company, Email</p>
+        </div>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+        <div class="file-info" id="file-info">
+          <span class="badge badge-green" id="file-badge"></span>
+          <span class="badge badge-blue" id="row-badge" style="margin-left:6px;"></span>
+          <div class="col-tags" id="col-tags"></div>
+        </div>
+        <div class="error-msg" id="file-error"></div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step-card locked" id="step2">
+      <div class="step-header"><div class="step-num">2</div><h2>Write your email template</h2></div>
+      <div class="step-body">
+        <div class="field">
+          <label>Subject line</label>
+          <input type="text" id="subject" placeholder="e.g. Telecom cost savings for {{Company}}">
+        </div>
+        <div class="field">
+          <label>Email body</label>
+          <textarea id="body" placeholder="Hi {{FirstName}},
+
+I wanted to reach out to you and the team at {{Company}} about...
+
+Best regards,
+Doug"></textarea>
+          <div class="hint">Use <code>{{FirstName}}</code> <code>{{LastName}}</code> <code>{{Company}}</code> — or any column header from your file wrapped in <code>{{ }}</code></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step-card locked" id="step3">
+      <div class="step-header"><div class="step-num">3</div><h2>Create drafts in Outlook</h2></div>
+      <div class="step-body">
+        <p style="font-family:Arial,sans-serif;font-size:13px;color:var(--text-muted);margin-bottom:1rem;">
+          All drafts will be created directly in your <strong>doug@g2contracts.com</strong> Drafts folder, CC'd to patrick@g2contracts.com. Open Outlook and click Send on each one.
+        </p>
+        <button class="btn-primary" id="gen-btn" disabled="" onclick="createDrafts()">✉ Create all drafts in Outlook</button>
+
+        <div class="progress-wrap" id="progress-wrap">
+          <div class="progress-outer"><div class="progress-inner" id="progress-bar"></div></div>
+          <div class="progress-label" id="progress-label">Starting…</div>
+        </div>
+
+        <div id="results">
+          <div class="summary-box" id="summary-box"></div>
+          <div class="results-bar">
+            <span><strong id="total-label">0</strong> drafts processed</span>
+            <span>Open Outlook → Drafts folder to send</span>
+          </div>
+          <div class="email-cards" id="email-cards"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── CONFIG — update CLIENT_ID after Azure app registration ───────────────────
+const CLIENT_ID  = 'PASTE_YOUR_CLIENT_ID_HERE';
+const FROM_EMAIL = 'doug@g2contracts.com';
+const CC_EMAIL   = 'patrick@g2contracts.com';
+const SCOPES     = ['Mail.ReadWrite'];
+
+let msalInstance = null;
+let accessToken  = null;
+let contacts     = [];
+
+// ── MSAL init ─────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  if (CLIENT_ID === 'PASTE_YOUR_CLIENT_ID_HERE') {
+    document.getElementById('auth-sub').textContent = '⚠️ Client ID not yet configured — see setup instructions.';
+    return;
+  }
+  initMsal();
+});
+
+function initMsal() {
+  msalInstance = new msal.PublicClientApplication({
+    auth: {
+      clientId: CLIENT_ID,
+      authority: 'https://login.microsoftonline.com/common',
+      redirectUri: window.location.origin + window.location.pathname,
+    },
+    cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+  });
+  msalInstance.handleRedirectPromise()
+    .then(r => { if (r) handleToken(r); else trySilent(); })
+    .catch(() => trySilent());
+}
+
+function trySilent() {
+  const accounts = msalInstance.getAllAccounts();
+  if (!accounts.length) { setAuth('out'); return; }
+  msalInstance.acquireTokenSilent({ scopes: SCOPES, account: accounts[0] })
+    .then(r => handleToken(r))
+    .catch(() => setAuth('out'));
+}
+
+async function signIn() {
+  if (!msalInstance) { alert('App not initialised — check CLIENT_ID.'); return; }
+  try {
+    const r = await msalInstance.loginPopup({ scopes: SCOPES, loginHint: FROM_EMAIL });
+    handleToken(r);
+  } catch(e) {
+    if (!e.message.includes('user_cancelled'))
+      document.getElementById('auth-sub').textContent = 'Sign-in error: ' + e.message;
+  }
+}
+
+function signOut() {
+  const acct = msalInstance?.getAllAccounts()[0];
+  if (acct) msalInstance.logoutPopup({ account: acct });
+  accessToken = null;
+  setAuth('out');
+}
+
+function handleToken(r) {
+  accessToken = r.accessToken;
+  setAuth('in', r.account?.name || r.account?.username);
+}
+
+function setAuth(state, name) {
+  const dot  = document.getElementById('auth-dot');
+  const title= document.getElementById('auth-title');
+  const sub  = document.getElementById('auth-sub');
+  const sin  = document.getElementById('btn-signin');
+  const sout = document.getElementById('btn-signout');
+  ['step1','step2','step3'].forEach(id => {
+    document.getElementById(id).classList.toggle('locked', state !== 'in');
+  });
+  if (state === 'in') {
+    dot.className = 'auth-dot on';
+    title.textContent = '✓ Signed in' + (name ? ' as ' + name : '');
+    sub.textContent   = 'Drafts → doug@g2contracts.com · CC: ' + CC_EMAIL;
+    sin.style.display = 'none';
+    sout.style.display= '';
+    document.getElementById('gen-btn').disabled = contacts.length === 0;
+  } else {
+    dot.className = 'auth-dot';
+    title.textContent = 'Not signed in';
+    sub.textContent   = 'Sign in with your doug@g2contracts.com account to continue';
+    sin.style.display = '';
+    sout.style.display= 'none';
+    document.getElementById('gen-btn').disabled = true;
+  }
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+const uploadZone = document.getElementById('upload-zone');
+const fileInput  = document.getElementById('file-input');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+
+function processFile(file) {
+  document.getElementById('file-error').textContent = '';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = XLSX.utils.sheet_to_json(
+        XLSX.read(e.target.result, { type: 'binary' }).Sheets[
+          XLSX.read(e.target.result, { type: 'binary' }).SheetNames[0]
+        ], { defval: '' });
+      if (!data.length) throw new Error('No data rows found.');
+      contacts = data;
+      document.getElementById('file-info').style.display = 'block';
+      document.getElementById('file-badge').textContent  = '✓ ' + file.name;
+      document.getElementById('row-badge').textContent   = data.length + ' contacts';
+      const tags = document.getElementById('col-tags');
+      tags.innerHTML = '<span style="font-size:12px;color:#9e9b94;font-family:Arial,sans-serif;align-self:center;">Columns:</span>';
+      Object.keys(data[0]).forEach(c => {
+        const t = document.createElement('span'); t.className = 'col-tag'; t.textContent = '{{'+c+'}}'; tags.appendChild(t);
+      });
+      if (accessToken) document.getElementById('gen-btn').disabled = false;
+    } catch(err) { document.getElementById('file-error').textContent = 'Could not read file: ' + err.message; }
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fill(tpl, row) {
+  return tpl.replace(/\{\{(\w[\w\s]*)\}\}/g, (m, k) => {
+    const key = k.trim().toLowerCase().replace(/\s+/g,'');
+    const col = Object.keys(row).find(c => c.toLowerCase().replace(/\s+/g,'') === key);
+    return col !== undefined ? String(row[col]||'') : m;
+  });
+}
+function initials(n) { return (n||'?').split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function findCol(cols,...kws) { for(const kw of kws){const f=cols.find(c=>c.toLowerCase().replace(/\s+/g,'').includes(kw));if(f)return f;} return cols[0]; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ── Create Drafts via Graph API ───────────────────────────────────────────────
+async function createDrafts() {
+  const subject = document.getElementById('subject').value.trim();
+  const body    = document.getElementById('body').value.trim();
+  if (!subject) { alert('Please add a subject line.'); return; }
+  if (!body)    { alert('Please write your email body.'); return; }
+
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true; btn.textContent = 'Creating drafts…';
+
+  const pw = document.getElementById('progress-wrap');
+  const pb = document.getElementById('progress-bar');
+  const pl = document.getElementById('progress-label');
+  pw.style.display = 'block';
+
+  const container = document.getElementById('email-cards');
+  container.innerHTML = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('summary-box').style.display = 'none';
+
+  const cols      = Object.keys(contacts[0]);
+  const emailCol  = findCol(cols,'email','mail');
+  const firstCol  = findCol(cols,'firstname','first');
+  const lastCol   = findCol(cols,'lastname','last','surname');
+  const companyCol= findCol(cols,'company','org','business','employer');
+
+  let ok = 0, fail = 0;
+
+  // Pre-render cards
+  contacts.forEach((row, i) => {
+    const email   = (row[emailCol]||'').trim();
+    const first   = (row[firstCol]||'').trim();
+    const last    = (row[lastCol]||'').trim();
+    const company = (row[companyCol]||'').trim();
+    const name    = [first,last].filter(Boolean).join(' ') || email;
+    const card = document.createElement('div');
+    card.className = 'email-card'; card.id = 'card-'+i;
+    card.innerHTML = `<div class="avatar">${esc(initials(name))}</div>
+      <div class="ec-info">
+        <div class="ec-name">${esc(name)}${company?' &mdash; '+esc(company):''}</div>
+        <div class="ec-email">${esc(email)}</div>
+        <div class="ec-status" id="st-${i}">⏳ Queued</div>
+      </div>`;
+    container.appendChild(card);
+  });
+  document.getElementById('total-label').textContent = contacts.length;
+
+  for (let i = 0; i < contacts.length; i++) {
+    const row     = contacts[i];
+    const email   = (row[emailCol]||'').trim();
+    const first   = (row[firstCol]||'').trim();
+    const last    = (row[lastCol]||'').trim();
+    const name    = [first,last].filter(Boolean).join(' ') || email;
+    const st      = document.getElementById('st-'+i);
+    const card    = document.getElementById('card-'+i);
+
+    st.textContent = '⏳ Creating…';
+    pb.style.width = Math.round((i/contacts.length)*100)+'%';
+    pl.textContent = `Draft ${i+1} of ${contacts.length}…`;
+
+    // Convert plain text body to HTML preserving line breaks
+    const htmlBody = fill(body, row)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\n/g,'<br>');
+
+    const payload = {
+      subject: fill(subject, row),
+      body: { contentType: 'HTML', content: htmlBody },
+      toRecipients: [{ emailAddress: { address: email, name } }],
+      ccRecipients: [{ emailAddress: { address: CC_EMAIL } }]
+    };
+
+    try {
+      // Refresh token silently if needed
+      if (!accessToken) throw new Error('Not authenticated — please sign in again.');
+      const resp = await fetch('https://graph.microsoft.com/v1.0/me/messages', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) {
+        const e = await resp.json().catch(()=>({}));
+        throw new Error(e?.error?.message || 'HTTP '+resp.status);
+      }
+      ok++;
+      card.classList.add('success');
+      st.className = 'ec-status ok'; st.textContent = '✓ Draft created';
+    } catch(err) {
+      fail++;
+      card.classList.add('fail');
+      st.className = 'ec-status err'; st.textContent = '✗ ' + err.message;
+    }
+
+    if (i < contacts.length - 1) await sleep(300);
+  }
+
+  pb.style.width = '100%';
+  pl.textContent = 'Done!';
+
+  const sb = document.getElementById('summary-box');
+  sb.style.display = 'block';
+  if (fail === 0) {
+    sb.className = 'summary-box ok';
+    sb.textContent = `✅ All ${ok} drafts created in your Outlook Drafts folder. Open Outlook → Drafts to send.`;
+  } else {
+    sb.className = 'summary-box warn';
+    sb.textContent = `⚠️ ${ok} drafts created, ${fail} failed. Check errors above.`;
+  }
+
+  btn.disabled = false; btn.textContent = '✉ Create all drafts in Outlook';
+}
+</script>
+
+
+</body></html>
